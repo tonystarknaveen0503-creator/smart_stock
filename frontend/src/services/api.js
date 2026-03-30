@@ -1,6 +1,4 @@
-const DEFAULT_API_BASE_URL = '/api'
-const LOCAL_API_BASE_URL = 'http://localhost:4000/api'
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
 function getApiBaseUrls() {
   const baseUrls = [API_BASE_URL]
@@ -9,11 +7,15 @@ function getApiBaseUrls() {
     return baseUrls
   }
 
-  const usesRelativeApiPath = !API_BASE_URL.startsWith('http')
-  const isAlreadyOnApiPort = window.location.port === '4000'
+  const isProduction = window.location.hostname !== 'localhost'
+  const usesRelativePath = API_BASE_URL.startsWith('/')
 
-  if (usesRelativeApiPath && !isAlreadyOnApiPort) {
-    baseUrls.push(LOCAL_API_BASE_URL)
+  if (isProduction && usesRelativePath) {
+    return baseUrls
+  }
+
+  if (!isProduction) {
+    baseUrls.push('http://localhost:4000/api')
   }
 
   return [...new Set(baseUrls)]
@@ -28,14 +30,6 @@ async function parsePayload(response) {
 
   const text = await response.text().catch(() => '')
   return text ? { message: text } : {}
-}
-
-function shouldRetryWithNextBaseUrl(response, remainingBaseUrls) {
-  if (remainingBaseUrls <= 0) {
-    return false
-  }
-
-  return response.status === 404 || response.status >= 500
 }
 
 async function request(path, options = {}) {
@@ -73,8 +67,10 @@ async function request(path, options = {}) {
       return payload
     }
 
-    if (shouldRetryWithNextBaseUrl(response, baseUrls.length - index - 1)) {
-      continue
+    if (response.status === 404 || response.status >= 500) {
+      if (index < baseUrls.length - 1) {
+        continue
+      }
     }
 
     break
@@ -87,12 +83,7 @@ async function request(path, options = {}) {
     )
   }
 
-  const fallbackMessage =
-    response.status >= 500
-      ? 'Smart Stock API is unavailable. Start the backend server with "npm run server" or "npm run dev:full".'
-      : 'Request failed.'
-
-  throw new Error(payload.message || fallbackMessage)
+  throw new Error(payload.message || `Request failed with status ${response.status}`)
 }
 
 export { API_BASE_URL, request }
