@@ -14,7 +14,7 @@ function getEnvConfig() {
   return {
     port: Number(process.env.PORT || 4000),
     jwtSecret: process.env.JWT_SECRET || 'smart-stock-dev-secret',
-    mongoUri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/smartstock',
+    mongoUri: process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/smartstock',
     adminEmail: (process.env.ADMIN_EMAIL || 'admin@smartstock.com').toLowerCase(),
     apiKey: process.env.ALPHA_VANTAGE_API_KEY || '',
   }
